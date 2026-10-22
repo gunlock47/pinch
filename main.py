@@ -2,15 +2,17 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import requests
 
 st.set_page_config(
     page_title="Beak Finder",
-    page_icon="🐦",
+    page_icon="🐧",
     layout="wide"
 )
 
-DATA_URL = "https://raw.githubusercontent.com/allisonhorst/palmerpenguins/main/inst/extdata/penguins.csv"
+DATA_URL = (
+    "https://raw.githubusercontent.com/allisonhorst/"
+    "palmerpenguins/main/inst/extdata/penguins.csv"
+)
 
 SPECIES_KO = {
     "Adelie": "아델리펭귄",
@@ -19,188 +21,185 @@ SPECIES_KO = {
 }
 
 SPECIES_INFO = {
-    "Adelie": "비교적 짧고 깊은 부리가 특징인 펭귄입니다.",
-    "Chinstrap": "상대적으로 길고 가는 부리를 가진 펭귄입니다.",
-    "Gentoo": "주황빛 부리와 큰 몸집이 특징인 펭귄입니다."
-}
-
-WIKI_TITLES = {
-    "Adelie": "Adélie_penguin",
-    "Chinstrap": "Chinstrap_penguin",
-    "Gentoo": "Gentoo_penguin"
+    "Adelie": "남극 주변에 서식하며 부리 길이와 깊이를 통해 특징을 비교할 수 있습니다.",
+    "Chinstrap": "턱 아래 검은 띠가 특징이며 다른 펭귄과 부리 측정값을 비교할 수 있습니다.",
+    "Gentoo": "주황빛 부리가 특징이며 세 종의 측정값을 비교할 수 있습니다."
 }
 
 
-@st.cache_data
+@st.cache_data(ttl=3600)
 def load_data():
     df = pd.read_csv(DATA_URL)
+
     df = df.dropna(
-        subset=["species", "bill_length_mm", "bill_depth_mm"]
-    )
-    df["species_ko"] = df["species"].map(SPECIES_KO)
+        subset=[
+            "species",
+            "bill_length_mm",
+            "bill_depth_mm"
+        ]
+    ).copy()
+
+    df["종"] = df["species"].map(SPECIES_KO)
+    df["부리길이"] = df["bill_length_mm"]
+    df["부리깊이"] = df["bill_depth_mm"]
+
     return df
 
 
-@st.cache_data(ttl=86400)
-def get_image(title):
-    try:
-        url = (
-            "https://en.wikipedia.org/api/rest_v1/page/summary/"
-            + requests.utils.quote(title, safe="_")
-        )
-        response = requests.get(url, timeout=8)
-        response.raise_for_status()
-        return response.json().get("thumbnail", {}).get("source")
-    except Exception:
-        return None
+st.title("🐧 Beak Finder")
+st.subheader("부리의 길이와 깊이로 펭귄 종류 찾기")
 
-
-st.title("🐦 Beak Finder")
-st.subheader("부리 모양으로 펭귄 찾아보기")
 st.write(
-    "부리의 길이와 깊이를 선택하면 조건에 맞는 펭귄 종을 확인할 수 있습니다."
+    "부리 길이와 깊이를 입력하면 실제 펭귄 측정 데이터와 "
+    "비교해 가장 비슷한 종을 찾아줍니다."
 )
 
 st.info(
-    "이 사이트는 Palmer Penguins 공개 데이터를 이용합니다. "
-    "현재 아델리펭귄, 턱끈펭귄, 젠투펭귄 3종을 대상으로 합니다."
+    "이 사이트는 펭귄 3종의 측정값을 비교하는 교육용 도구입니다. "
+    "부리 모양만으로 종을 확정할 수는 없습니다."
 )
 
 try:
     df = load_data()
 except Exception:
-    st.error("데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.")
+    st.error(
+        "데이터를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요."
+    )
     st.stop()
 
-st.sidebar.header("부리 유형 선택")
 
-beak_type = st.sidebar.selectbox(
-    "찾고 싶은 부리 유형",
-    [
-        "전체 보기",
-        "길고 얕은 부리",
-        "길고 깊은 부리",
-        "짧고 얕은 부리",
-        "짧고 깊은 부리"
-    ]
-)
+st.header("🔎 부리 측정값 입력")
 
-length_mid = df["bill_length_mm"].median()
-depth_mid = df["bill_depth_mm"].median()
+col1, col2 = st.columns(2)
 
-if beak_type == "길고 얕은 부리":
-    result = df[
-        (df["bill_length_mm"] >= length_mid)
-        & (df["bill_depth_mm"] < depth_mid)
-    ]
-elif beak_type == "길고 깊은 부리":
-    result = df[
-        (df["bill_length_mm"] >= length_mid)
-        & (df["bill_depth_mm"] >= depth_mid)
-    ]
-elif beak_type == "짧고 얕은 부리":
-    result = df[
-        (df["bill_length_mm"] < length_mid)
-        & (df["bill_depth_mm"] < depth_mid)
-    ]
-elif beak_type == "짧고 깊은 부리":
-    result = df[
-        (df["bill_length_mm"] < length_mid)
-        & (df["bill_depth_mm"] >= depth_mid)
-    ]
-else:
-    result = df.copy()
+with col1:
+    length = st.number_input(
+        "부리 길이 (mm)",
+        min_value=0.1,
+        max_value=200.0,
+        value=40.0,
+        step=0.5
+    )
 
-st.caption(
-    f"분석 데이터: {len(df)}개 관측값 | "
-    "부리 유형은 전체 데이터의 중앙값을 기준으로 구분합니다."
-)
+with col2:
+    depth = st.number_input(
+        "부리 깊이 (mm)",
+        min_value=0.1,
+        max_value=100.0,
+        value=18.0,
+        step=0.5
+    )
 
-st.header("🔎 검색 결과")
 
-if result.empty:
-    st.warning("해당 부리 유형의 데이터가 없습니다.")
-    st.stop()
+# 부리 길이와 깊이의 표준편차를 이용해 거리를 계산합니다.
+length_std = df["bill_length_mm"].std()
+depth_std = df["bill_depth_mm"].std()
 
-counts = result["species"].value_counts()
+if pd.isna(length_std) or length_std == 0:
+    length_std = 1
 
-species_order = ["Adelie", "Chinstrap", "Gentoo"]
-found_species = [s for s in species_order if s in counts.index]
+if pd.isna(depth_std) or depth_std == 0:
+    depth_std = 1
 
-cols = st.columns(len(found_species))
+df["거리"] = (
+    ((df["bill_length_mm"] - length) / length_std) ** 2
+    + ((df["bill_depth_mm"] - depth) / depth_std) ** 2
+) ** 0.5
 
-for col, species in zip(cols, found_species):
-    with col:
-        st.subheader(SPECIES_KO[species])
 
-        image_url = get_image(WIKI_TITLES[species])
+# 입력한 값과 가장 가까운 펭귄 측정값을 찾습니다.
+nearest = df.loc[df["거리"].idxmin()]
+predicted_species = nearest["species"]
 
-        if image_url:
-            st.image(image_url, use_container_width=True)
-        else:
-            st.markdown("### 🐧")
-            st.caption("사진을 불러올 수 없습니다.")
-
-        st.write(SPECIES_INFO[species])
-        st.metric(
-            "조건에 해당하는 기록",
-            f"{int(counts[species])}개"
-        )
 
 st.divider()
+st.header("🐧 분석 결과")
 
-st.header("📊 부리 크기 비교")
+st.subheader(
+    f"가장 비슷한 종: {SPECIES_KO[predicted_species]}"
+)
 
-plot_data = result.copy()
-plot_data["종"] = plot_data["species"].map(SPECIES_KO)
+st.write(SPECIES_INFO[predicted_species])
+
+result1, result2 = st.columns(2)
+
+with result1:
+    st.metric("입력한 부리 길이", f"{length:.2f} mm")
+    st.metric(
+        "비교 대상의 부리 길이",
+        f"{nearest['bill_length_mm']:.2f} mm"
+    )
+
+with result2:
+    st.metric("입력한 부리 깊이", f"{depth:.2f} mm")
+    st.metric(
+        "비교 대상의 부리 깊이",
+        f"{nearest['bill_depth_mm']:.2f} mm"
+    )
+
+st.caption(
+    "비교 대상의 측정값은 데이터에서 가장 가까운 개체의 값입니다. "
+    "종 전체의 평균값과는 다를 수 있습니다."
+)
+
+
+st.header("📊 펭귄 종별 부리 측정값")
 
 fig = px.scatter(
-    plot_data,
+    df,
     x="bill_length_mm",
     y="bill_depth_mm",
     color="종",
-    hover_data=["island", "year"],
+    hover_data=["island", "sex"],
     labels={
         "bill_length_mm": "부리 길이 (mm)",
         "bill_depth_mm": "부리 깊이 (mm)",
-        "종": "펭귄 종"
+        "종": "펭귄 종류"
     },
-    title="부리 길이와 깊이의 관계"
+    title="펭귄의 부리 길이와 깊이 비교"
+)
+
+fig.add_scatter(
+    x=[length],
+    y=[depth],
+    mode="markers",
+    name="입력한 값",
+    marker=dict(size=14, symbol="x")
 )
 
 st.plotly_chart(fig, use_container_width=True)
 
-with st.expander("측정 데이터 확인하기"):
+
+with st.expander("전체 측정 데이터 보기"):
     st.dataframe(
-        result[
+        df[
             [
-                "species_ko",
+                "종",
                 "bill_length_mm",
                 "bill_depth_mm",
-                "flipper_length_mm",
-                "body_mass_g",
-                "island"
+                "island",
+                "sex"
             ]
-        ].rename(columns={
-            "species_ko": "펭귄 종",
-            "bill_length_mm": "부리 길이(mm)",
-            "bill_depth_mm": "부리 깊이(mm)",
-            "flipper_length_mm": "날개 길이(mm)",
-            "body_mass_g": "몸무게(g)",
-            "island": "조사 지역"
-        }),
+        ].rename(
+            columns={
+                "bill_length_mm": "부리 길이(mm)",
+                "bill_depth_mm": "부리 깊이(mm)",
+                "island": "조사 섬",
+                "sex": "성별"
+            }
+        ),
         use_container_width=True
     )
 
+
 st.divider()
+st.subheader("데이터 출처")
 
-st.header("📚 데이터 출처")
+st.markdown(
+    "[Palmer Penguins 데이터셋](https://github.com/"
+    "allisonhorst/palmerpenguins/blob/main/inst/extdata/penguins.csv)"
+)
 
-st.markdown("""
-- [Palmer Penguins 데이터 설명](https://allisonhorst.github.io/palmerpenguins/)
-- [원본 CSV 데이터](https://github.com/allisonhorst/palmerpenguins/blob/main/inst/extdata/penguins.csv)
-- [UCI Machine Learning Repository](https://archive.ics.uci.edu/dataset/690/palmer+penguins-3)
-
-이 사이트는 교육용 데이터 탐색 도구입니다.
-부리 형태만으로 모든 새의 종을 확정할 수는 없습니다.
-""")
+st.markdown(
+    "[데이터 설명](https://allisonhorst.github.io/palmerpenguins/)"
+)
