@@ -7,6 +7,6 @@
 -20807박건록: 예전에 미대입시 초반에 새의 종이나 형태에 관심이 생겨서 새에 대해 많이 찾아봤고,그 후 새를 보다 더 잘 그리기 위해 정보를 찾아본 경험을 시작으로 이번프로젝트를통해 더욱 자세히 알고자 이 주제를 선택하게 되었으며 그중 팽귄에 관심이 생겨서 이 주제를 선택했다.
 -20827허승민: 펭귄마다 부리의 길이와 깊이가 다르다는 점이 흥미로웠습니다. 그래서 실제 펭귄 데이터를 분석하고 부리의 길이와 깊이를 입력하면 가장 비슷한 펭귄 종을 찾아주는 웹사이트를 주제로 선정했습니다.
 ## 데이터
-- 출처:https://archive.ics.uci.edu/dataset/690/palmer%2Bpenguins-3?utm_source=chatgpt.com(펭귄의 부리 크기로 종 분류하기) , https://datadryad.org/dataset/doi%3A10.5061/dryad.42s0c?utm_source=chatgpt.com(물새 42종의 부리 형태 데이터) , https://datadryad.org/dataset/doi:10.5061/dryad.d51c5b0dm?utm_source=chatgpt.com(카나리아 87마리의 부리 측정 데이터)
+- 출처:https://archive.ics.uci.edu/dataset/690/palmer%2Bpenguins-3?utm_source=chatgpt.com(펭귄의 부리 크기로 종 분류하기)
 - 사용한 열:뿌리길이(mm),뿌리깊이(mm)
 - 개인 단위 정보 없음 확인: 예
