@@ -2,204 +2,363 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from datetime import datetime
+
+# --------------------------------
+# 기본 설정
+# --------------------------------
 
 st.set_page_config(
-    page_title="Beak Finder",
+    page_title="펭귄 부리 분석",
     page_icon="🐧",
     layout="wide"
 )
 
 DATA_URL = (
-    "https://raw.githubusercontent.com/allisonhorst/"
-    "palmerpenguins/main/inst/extdata/penguins.csv"
+    "https://raw.githubusercontent.com/"
+    "allisonhorst/palmerpenguins/main/"
+    "inst/extdata/penguins.csv"
 )
 
-SPECIES_KO = {
+SPECIES_NAMES = {
     "Adelie": "아델리펭귄",
     "Chinstrap": "턱끈펭귄",
     "Gentoo": "젠투펭귄"
 }
 
-SPECIES_INFO = {
-    "Adelie": "남극 주변에 서식하며 부리 길이와 깊이를 통해 특징을 비교할 수 있습니다.",
-    "Chinstrap": "턱 아래 검은 띠가 특징이며 다른 펭귄과 부리 측정값을 비교할 수 있습니다.",
-    "Gentoo": "주황빛 부리가 특징이며 세 종의 측정값을 비교할 수 있습니다."
-}
-
-
-@st.cache_data(ttl=3600)
-def load_data():
-    df = pd.read_csv(DATA_URL)
-
-    df = df.dropna(
-        subset=[
-            "species",
-            "bill_length_mm",
-            "bill_depth_mm"
-        ]
-    ).copy()
-
-    df["종"] = df["species"].map(SPECIES_KO)
-    df["부리길이"] = df["bill_length_mm"]
-    df["부리깊이"] = df["bill_depth_mm"]
-
-    return df
-
-
-st.title("🐧 Beak Finder")
-st.subheader("부리의 길이와 깊이로 펭귄 종류 찾기")
-
+st.title("🐧 펭귄 부리로 종 추정하기")
 st.write(
-    "부리 길이와 깊이를 입력하면 실제 펭귄 측정 데이터와 "
-    "비교해 가장 비슷한 종을 찾아줍니다."
+    "부리 길이와 깊이를 입력하면 실제 펭귄 데이터와 비교하여 "
+    "가장 비슷한 펭귄 종을 찾아줍니다."
 )
 
-st.info(
-    "이 사이트는 펭귄 3종의 측정값을 비교하는 교육용 도구입니다. "
-    "부리 모양만으로 종을 확정할 수는 없습니다."
-)
+# --------------------------------
+# 데이터 불러오기
+# --------------------------------
+
+@st.cache_data
+def load_data():
+    return pd.read_csv(DATA_URL)
 
 try:
-    df = load_data()
-except Exception:
-    st.error(
-        "데이터를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요."
-    )
+    raw_df = load_data()
+except Exception as e:
+    st.error("데이터를 불러오지 못했습니다.")
+    st.code(str(e))
     st.stop()
 
+# 전처리 전 행 수
+before_rows = len(raw_df)
 
-st.header("🔎 부리 측정값 입력")
+# 열별 결측치 확인
+missing_values = raw_df.isna().sum()
+
+# 부리 길이, 깊이, 종 정보가 없는 행 제거
+df = raw_df.dropna(
+    subset=[
+        "bill_length_mm",
+        "bill_depth_mm",
+        "species"
+    ]
+).copy()
+
+after_rows = len(df)
+removed_rows = before_rows - after_rows
+
+# 한글 종 이름 추가
+df["species_korean"] = df["species"].map(SPECIES_NAMES)
+
+# --------------------------------
+# 전처리 로그
+# --------------------------------
+
+log_messages = [
+    f"데이터 불러오기 완료: {before_rows}개 행",
+    f"부리 길이 결측치: {missing_values['bill_length_mm']}개",
+    f"부리 깊이 결측치: {missing_values['bill_depth_mm']}개",
+    f"성별 결측치: {missing_values['sex']}개",
+    f"결측치 전처리: {before_rows} → {after_rows}",
+    f"제거된 행 수: {removed_rows}개",
+    "island 변수는 종 추정 입력에서 제외"
+]
+
+st.sidebar.header("데이터 전처리 로그")
+
+for message in log_messages:
+    st.sidebar.write("• " + message)
+
+st.sidebar.caption(
+    "성별 결측 행은 분석에 필요하지 않아 유지합니다."
+)
+
+# --------------------------------
+# 데이터 요약
+# --------------------------------
+
+st.header("1. 데이터 살펴보기")
+
+col1, col2, col3 = st.columns(3)
+
+col1.metric("전처리 전 데이터", f"{before_rows}개")
+col2.metric("전처리 후 데이터", f"{after_rows}개")
+col3.metric("제거된 데이터", f"{removed_rows}개")
+
+st.subheader("열별 결측치 개수")
+st.dataframe(
+    missing_values.rename("결측치 개수"),
+    use_container_width=True
+)
+
+st.subheader("펭귄 종별 데이터 개수")
+
+species_counts = df["species_korean"].value_counts()
+
+species_ratio = (
+    df["species_korean"].value_counts(normalize=True) * 100
+).round(1)
+
+count_df = pd.DataFrame({
+    "데이터 개수": species_counts,
+    "비율(%)": species_ratio
+})
+
+st.dataframe(count_df, use_container_width=True)
+
+fig_count = px.bar(
+    count_df.reset_index(),
+    x="species_korean",
+    y="데이터 개수",
+    color="species_korean",
+    title="펭귄 종별 데이터 개수",
+    labels={
+        "species_korean": "펭귄 종",
+        "데이터 개수": "개체 수"
+    }
+)
+
+st.plotly_chart(fig_count, use_container_width=True)
+
+st.info(
+    "턱끈펭귄은 전체 데이터의 약 19.8%로 "
+    "세 종 중 데이터 비율이 가장 낮습니다. "
+    "종별 데이터 수의 차이를 고려하여 결과를 해석해야 합니다."
+)
+
+# --------------------------------
+# 종과 섬의 관계
+# --------------------------------
+
+st.header("2. 펭귄 종과 서식 섬의 관계")
+
+island_table = pd.crosstab(
+    df["species_korean"],
+    df["island"]
+)
+
+st.write("종별 섬 분포")
+st.dataframe(island_table, use_container_width=True)
+
+st.warning(
+    "턱끈펭귄은 모두 Dream 섬, 젠투펭귄은 모두 Biscoe 섬에 "
+    "분포합니다. 따라서 island를 입력 변수에 포함하면 "
+    "부리 특징을 분석하지 않고도 종을 쉽게 구분할 수 있습니다. "
+    "이번 프로젝트에서는 island를 종 추정에 사용하지 않습니다."
+)
+
+# --------------------------------
+# 상관관계 분석
+# --------------------------------
+
+st.header("3. 부리 길이와 깊이의 상관관계")
+
+overall_corr = df[
+    ["bill_length_mm", "bill_depth_mm"]
+].corr().iloc[0, 1]
+
+st.subheader("① 전체 펭귄 산점도")
+
+fig1 = px.scatter(
+    df,
+    x="bill_length_mm",
+    y="bill_depth_mm",
+    title="전체 펭귄의 부리 길이와 깊이",
+    labels={
+        "bill_length_mm": "부리 길이(mm)",
+        "bill_depth_mm": "부리 깊이(mm)"
+    }
+)
+
+st.plotly_chart(fig1, use_container_width=True)
+
+st.metric("전체 상관계수", f"{overall_corr:.3f}")
+
+st.subheader("② 종별 색상 산점도")
+
+fig2 = px.scatter(
+    df,
+    x="bill_length_mm",
+    y="bill_depth_mm",
+    color="species_korean",
+    title="펭귄 종별 부리 길이와 깊이",
+    labels={
+        "bill_length_mm": "부리 길이(mm)",
+        "bill_depth_mm": "부리 깊이(mm)",
+        "species_korean": "펭귄 종"
+    }
+)
+
+st.plotly_chart(fig2, use_container_width=True)
+
+st.subheader("③ 종별 상관계수")
+
+species_corr = df.groupby("species_korean").apply(
+    lambda group: group["bill_length_mm"].corr(
+        group["bill_depth_mm"]
+    )
+)
+
+for species, corr in species_corr.items():
+    st.write(f"**{species}**: {corr:.3f}")
+
+st.info(
+    "전체 데이터와 종별 데이터에서 상관관계의 방향이 "
+    "다르게 나타날 수 있습니다. 종마다 부리의 크기와 형태가 "
+    "다르기 때문이며, 전체적인 관계만으로 각 종 내부의 "
+    "관계를 판단하기 어렵습니다."
+)
+
+# --------------------------------
+# 종 추정 기능
+# --------------------------------
+
+st.header("4. 부리 길이와 깊이로 펭귄 종 추정하기")
+
+st.write(
+    "부리 길이와 깊이를 입력하면 데이터에 저장된 펭귄 중 "
+    "가장 가까운 특징을 가진 개체를 찾아줍니다."
+)
 
 col1, col2 = st.columns(2)
 
 with col1:
-    length = st.number_input(
-        "부리 길이 (mm)",
-        min_value=0.1,
-        max_value=200.0,
-        value=40.0,
-        step=0.5
+    bill_length = st.number_input(
+        "부리 길이(mm)",
+        min_value=25.0,
+        max_value=70.0,
+        value=45.0,
+        step=0.1
     )
 
 with col2:
-    depth = st.number_input(
-        "부리 깊이 (mm)",
-        min_value=0.1,
-        max_value=100.0,
-        value=18.0,
-        step=0.5
+    bill_depth = st.number_input(
+        "부리 깊이(mm)",
+        min_value=10.0,
+        max_value=25.0,
+        value=17.0,
+        step=0.1
     )
 
+if st.button("펭귄 종 추정하기", use_container_width=True):
 
-# 부리 길이와 깊이의 표준편차를 이용해 거리를 계산합니다.
-length_std = df["bill_length_mm"].std()
-depth_std = df["bill_depth_mm"].std()
+    # 부리 길이와 깊이의 표준편차
+    length_std = df["bill_length_mm"].std()
+    depth_std = df["bill_depth_mm"].std()
 
-if pd.isna(length_std) or length_std == 0:
-    length_std = 1
+    # 두 측정값을 표준화하여 거리 계산
+    distances = (
+        ((df["bill_length_mm"] - bill_length) / length_std) ** 2
+        +
+        ((df["bill_depth_mm"] - bill_depth) / depth_std) ** 2
+    ) ** 0.5
 
-if pd.isna(depth_std) or depth_std == 0:
-    depth_std = 1
+    closest_index = distances.idxmin()
+    closest = df.loc[closest_index]
 
-df["거리"] = (
-    ((df["bill_length_mm"] - length) / length_std) ** 2
-    + ((df["bill_depth_mm"] - depth) / depth_std) ** 2
-) ** 0.5
+    result_species = closest["species_korean"]
 
+    st.success(f"가장 비슷한 종은 **{result_species}**입니다!")
 
-# 입력한 값과 가장 가까운 펭귄 측정값을 찾습니다.
-nearest = df.loc[df["거리"].idxmin()]
-predicted_species = nearest["species"]
+    col1, col2, col3 = st.columns(3)
 
+    col1.metric("추정 종", result_species)
+    col2.metric(
+        "비교된 부리 길이",
+        f"{closest['bill_length_mm']:.1f} mm"
+    )
+    col3.metric(
+        "비교된 부리 깊이",
+        f"{closest['bill_depth_mm']:.1f} mm"
+    )
 
-st.divider()
-st.header("🐧 분석 결과")
+    st.write(
+        f"입력한 부리 길이: {bill_length:.1f} mm"
+    )
+    st.write(
+        f"입력한 부리 깊이: {bill_depth:.1f} mm"
+    )
 
-st.subheader(
-    f"가장 비슷한 종: {SPECIES_KO[predicted_species]}"
+    # 입력값과 실제 데이터 산점도
+    result_plot = df.copy()
+
+    fig3 = px.scatter(
+        result_plot,
+        x="bill_length_mm",
+        y="bill_depth_mm",
+        color="species_korean",
+        title="입력한 부리 특징과 실제 펭귄 데이터 비교",
+        labels={
+            "bill_length_mm": "부리 길이(mm)",
+            "bill_depth_mm": "부리 깊이(mm)",
+            "species_korean": "펭귄 종"
+        }
+    )
+
+    fig3.add_scatter(
+        x=[bill_length],
+        y=[bill_depth],
+        mode="markers",
+        name="입력값",
+        marker=dict(
+            color="red",
+            size=15,
+            symbol="star"
+        )
+    )
+
+    st.plotly_chart(fig3, use_container_width=True)
+
+    st.caption(
+        "이 결과는 부리 길이와 깊이가 가장 가까운 데이터 한 개를 "
+        "찾은 것입니다. 학습된 머신러닝 모델의 예측이나 "
+        "확정적인 종 판별 결과는 아닙니다."
+    )
+
+# --------------------------------
+# 원본 데이터 확인
+# --------------------------------
+
+st.header("5. 펭귄 데이터 확인")
+
+with st.expander("전처리된 데이터 전체 보기"):
+    st.dataframe(df, use_container_width=True)
+
+# --------------------------------
+# 데이터 출처 및 프로젝트 안내
+# --------------------------------
+
+st.header("6. 데이터 출처")
+
+st.markdown(
+    """
+    - 데이터셋: Palmer Penguins
+    - 분석 대상: 아델리펭귄, 턱끈펭귄, 젠투펭귄
+    - 사용 변수: 부리 길이(bill_length_mm), 부리 깊이(bill_depth_mm)
+    - 제외 변수: island, sex
+    - 데이터 출처: [Palmer Penguins GitHub](https://github.com/allisonhorst/palmerpenguins)
+    """
 )
-
-st.write(SPECIES_INFO[predicted_species])
-
-result1, result2 = st.columns(2)
-
-with result1:
-    st.metric("입력한 부리 길이", f"{length:.2f} mm")
-    st.metric(
-        "비교 대상의 부리 길이",
-        f"{nearest['bill_length_mm']:.2f} mm"
-    )
-
-with result2:
-    st.metric("입력한 부리 깊이", f"{depth:.2f} mm")
-    st.metric(
-        "비교 대상의 부리 깊이",
-        f"{nearest['bill_depth_mm']:.2f} mm"
-    )
 
 st.caption(
-    "비교 대상의 측정값은 데이터에서 가장 가까운 개체의 값입니다. "
-    "종 전체의 평균값과는 다를 수 있습니다."
-)
-
-
-st.header("📊 펭귄 종별 부리 측정값")
-
-fig = px.scatter(
-    df,
-    x="bill_length_mm",
-    y="bill_depth_mm",
-    color="종",
-    hover_data=["island", "sex"],
-    labels={
-        "bill_length_mm": "부리 길이 (mm)",
-        "bill_depth_mm": "부리 깊이 (mm)",
-        "종": "펭귄 종류"
-    },
-    title="펭귄의 부리 길이와 깊이 비교"
-)
-
-fig.add_scatter(
-    x=[length],
-    y=[depth],
-    mode="markers",
-    name="입력한 값",
-    marker=dict(size=14, symbol="x")
-)
-
-st.plotly_chart(fig, use_container_width=True)
-
-
-with st.expander("전체 측정 데이터 보기"):
-    st.dataframe(
-        df[
-            [
-                "종",
-                "bill_length_mm",
-                "bill_depth_mm",
-                "island",
-                "sex"
-            ]
-        ].rename(
-            columns={
-                "bill_length_mm": "부리 길이(mm)",
-                "bill_depth_mm": "부리 깊이(mm)",
-                "island": "조사 섬",
-                "sex": "성별"
-            }
-        ),
-        use_container_width=True
-    )
-
-
-st.divider()
-st.subheader("데이터 출처")
-
-st.markdown(
-    "[Palmer Penguins 데이터셋](https://github.com/"
-    "allisonhorst/palmerpenguins/blob/main/inst/extdata/penguins.csv)"
-)
-
-st.markdown(
-    "[데이터 설명](https://allisonhorst.github.io/palmerpenguins/)"
+    "저장소 이름은 pinch이지만 현재 사용 데이터는 핀치새가 아닌 "
+    "펭귄 데이터입니다. 핀치새 분석은 추후 확장 주제로 계획합니다."
 )
