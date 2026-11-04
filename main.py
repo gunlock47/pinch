@@ -2,10 +2,9 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from datetime import datetime
 
 # --------------------------------
-# 기본 설정
+# 1. 기본 설정
 # --------------------------------
 
 st.set_page_config(
@@ -33,12 +32,12 @@ st.write(
 )
 
 # --------------------------------
-# 데이터 불러오기
+# 2. 데이터 불러오기
 # --------------------------------
 
 @st.cache_data
 def load_data():
-    return pd.read_csv(DATA_URL)
+    return pd.read_csv(DATA_URL, encoding="utf-8")
 
 try:
     raw_df = load_data()
@@ -47,13 +46,47 @@ except Exception as e:
     st.code(str(e))
     st.stop()
 
-# 전처리 전 행 수
+# --------------------------------
+# 3. 원본 데이터 확인
+# --------------------------------
+
+st.header("1. 원본 데이터 살펴보기")
+
+st.write(
+    f"전체 데이터: {raw_df.shape[0]}행 / "
+    f"{raw_df.shape[1]}열"
+)
+
+st.subheader("데이터 처음 10개")
+st.dataframe(raw_df.head(10), use_container_width=True)
+
+st.subheader("데이터 자료형")
+st.dataframe(
+    raw_df.dtypes.astype(str).rename("자료형"),
+    use_container_width=True
+)
+
+# 열별 결측치 개수와 비율 계산
+missing_summary = pd.DataFrame({
+    "결측치 개수": raw_df.isna().sum(),
+    "결측치 비율(%)": (
+        raw_df.isna().mean() * 100
+    ).round(1)
+})
+
+st.subheader("열별 결측치 현황")
+st.dataframe(missing_summary, use_container_width=True)
+
+st.caption(
+    "결측치 개수와 비율은 전처리 전 원본 데이터 344개를 기준으로 계산합니다."
+)
+
+# --------------------------------
+# 4. 데이터 전처리
+# --------------------------------
+
 before_rows = len(raw_df)
 
-# 열별 결측치 확인
-missing_values = raw_df.isna().sum()
-
-# 부리 길이, 깊이, 종 정보가 없는 행 제거
 df = raw_df.dropna(
     subset=[
         "bill_length_mm",
@@ -65,21 +98,20 @@ df = raw_df.dropna(
 after_rows = len(df)
 removed_rows = before_rows - after_rows
 
-# 한글 종 이름 추가
 df["species_korean"] = df["species"].map(SPECIES_NAMES)
 
 # --------------------------------
-# 전처리 로그
+# 5. 전처리 로그
 # --------------------------------
 
 log_messages = [
-    f"데이터 불러오기 완료: {before_rows}개 행",
-    f"부리 길이 결측치: {missing_values['bill_length_mm']}개",
-    f"부리 깊이 결측치: {missing_values['bill_depth_mm']}개",
-    f"성별 결측치: {missing_values['sex']}개",
-    f"결측치 전처리: {before_rows} → {after_rows}",
-    f"제거된 행 수: {removed_rows}개",
-    "island 변수는 종 추정 입력에서 제외"
+    f"원본 데이터: {before_rows}개 행",
+    f"부리 길이 결측치: {missing_summary.loc['bill_length_mm', '결측치 개수']}개",
+    f"부리 깊이 결측치: {missing_summary.loc['bill_depth_mm', '결측치 개수']}개",
+    f"성별 결측치: {missing_summary.loc['sex', '결측치 개수']}개",
+    f"전처리 결과: {before_rows} → {after_rows}",
+    f"제거된 행: {removed_rows}개",
+    "island 변수는 종 추정에서 제외"
 ]
 
 st.sidebar.header("데이터 전처리 로그")
@@ -92,22 +124,16 @@ st.sidebar.caption(
 )
 
 # --------------------------------
-# 데이터 요약
+# 6. 데이터 전처리 결과
 # --------------------------------
 
-st.header("1. 데이터 살펴보기")
+st.header("2. 데이터 전처리 결과")
 
 col1, col2, col3 = st.columns(3)
 
 col1.metric("전처리 전 데이터", f"{before_rows}개")
 col2.metric("전처리 후 데이터", f"{after_rows}개")
 col3.metric("제거된 데이터", f"{removed_rows}개")
-
-st.subheader("열별 결측치 개수")
-st.dataframe(
-    missing_values.rename("결측치 개수"),
-    use_container_width=True
-)
 
 st.subheader("펭귄 종별 데이터 개수")
 
@@ -145,10 +171,10 @@ st.info(
 )
 
 # --------------------------------
-# 종과 섬의 관계
+# 7. 종과 섬의 관계
 # --------------------------------
 
-st.header("2. 펭귄 종과 서식 섬의 관계")
+st.header("3. 펭귄 종과 서식 섬의 관계")
 
 island_table = pd.crosstab(
     df["species_korean"],
@@ -166,10 +192,10 @@ st.warning(
 )
 
 # --------------------------------
-# 상관관계 분석
+# 8. 상관관계 분석
 # --------------------------------
 
-st.header("3. 부리 길이와 깊이의 상관관계")
+st.header("4. 부리 길이와 깊이의 상관관계")
 
 overall_corr = df[
     ["bill_length_mm", "bill_depth_mm"]
@@ -228,10 +254,10 @@ st.info(
 )
 
 # --------------------------------
-# 종 추정 기능
+# 9. 펭귄 종 추정 기능
 # --------------------------------
 
-st.header("4. 부리 길이와 깊이로 펭귄 종 추정하기")
+st.header("5. 부리 길이와 깊이로 펭귄 종 추정하기")
 
 st.write(
     "부리 길이와 깊이를 입력하면 데이터에 저장된 펭귄 중 "
@@ -260,11 +286,9 @@ with col2:
 
 if st.button("펭귄 종 추정하기", use_container_width=True):
 
-    # 부리 길이와 깊이의 표준편차
     length_std = df["bill_length_mm"].std()
     depth_std = df["bill_depth_mm"].std()
 
-    # 두 측정값을 표준화하여 거리 계산
     distances = (
         ((df["bill_length_mm"] - bill_length) / length_std) ** 2
         +
@@ -276,32 +300,29 @@ if st.button("펭귄 종 추정하기", use_container_width=True):
 
     result_species = closest["species_korean"]
 
-    st.success(f"가장 비슷한 종은 **{result_species}**입니다!")
+    st.success(
+        f"가장 비슷한 종은 **{result_species}**입니다!"
+    )
 
     col1, col2, col3 = st.columns(3)
 
     col1.metric("추정 종", result_species)
+
     col2.metric(
         "비교된 부리 길이",
         f"{closest['bill_length_mm']:.1f} mm"
     )
+
     col3.metric(
         "비교된 부리 깊이",
         f"{closest['bill_depth_mm']:.1f} mm"
     )
 
-    st.write(
-        f"입력한 부리 길이: {bill_length:.1f} mm"
-    )
-    st.write(
-        f"입력한 부리 깊이: {bill_depth:.1f} mm"
-    )
-
-    # 입력값과 실제 데이터 산점도
-    result_plot = df.copy()
+    st.write(f"입력한 부리 길이: {bill_length:.1f} mm")
+    st.write(f"입력한 부리 깊이: {bill_depth:.1f} mm")
 
     fig3 = px.scatter(
-        result_plot,
+        df,
         x="bill_length_mm",
         y="bill_depth_mm",
         color="species_korean",
@@ -334,19 +355,19 @@ if st.button("펭귄 종 추정하기", use_container_width=True):
     )
 
 # --------------------------------
-# 원본 데이터 확인
+# 10. 원본 데이터 확인
 # --------------------------------
 
-st.header("5. 펭귄 데이터 확인")
+st.header("6. 펭귄 데이터 확인")
 
 with st.expander("전처리된 데이터 전체 보기"):
     st.dataframe(df, use_container_width=True)
 
 # --------------------------------
-# 데이터 출처 및 프로젝트 안내
+# 11. 데이터 출처
 # --------------------------------
 
-st.header("6. 데이터 출처")
+st.header("7. 데이터 출처")
 
 st.markdown(
     """
@@ -359,6 +380,6 @@ st.markdown(
 )
 
 st.caption(
-    "저장소 이름은 pinch이지만 현재 사용 데이터는 핀치새가 아닌 "
-    "펭귄 데이터입니다. 핀치새 분석은 추후 확장 주제로 계획합니다."
+    "현재 사용 데이터는 핀치새가 아닌 펭귄 데이터입니다. "
+    "핀치새 분석은 추후 확장 주제로 계획합니다."
 )
