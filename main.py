@@ -16,10 +16,10 @@ st.set_page_config(
 
 st.title("🐧 펭귄 부리 연구소")
 st.markdown("""
-펭귄의 **부리 길이와 깊이**를 중심으로 종과 서식지의 관계를 분석합니다.
+펭귄의 부리 길이와 깊이를 중심으로 종과 서식지의 관계를 분석합니다.
 
 Palmer Penguins 데이터를 이용해 펭귄의 형태적 특징과
-섬별 분포에 어떤 관계가 있는지 탐구합니다.
+섬별 분포 사이의 관계를 탐구합니다.
 """)
 
 DATA_URL = (
@@ -65,21 +65,18 @@ st.header("1. 데이터 기본 정보")
 
 col1, col2, col3 = st.columns(3)
 
-with col1:
-    st.metric("전체 데이터 행", f"{raw_df.shape[0]}개")
-
-with col2:
-    st.metric("전체 데이터 열", f"{raw_df.shape[1]}개")
-
-with col3:
-    st.metric("전체 결측 셀 수", f"{int(raw_df.isna().sum().sum())}개")
+col1.metric("전체 데이터 행", f"{raw_df.shape[0]}개")
+col2.metric("전체 데이터 열", f"{raw_df.shape[1]}개")
+col3.metric("전체 결측 셀 수", f"{int(raw_df.isna().sum().sum())}개")
 
 st.subheader("원본 데이터 미리보기")
 st.dataframe(raw_df.head(10), use_container_width=True)
 
 st.subheader("열별 데이터 유형")
-dtype_table = raw_df.dtypes.astype(str).rename("데이터 유형")
-st.dataframe(dtype_table, use_container_width=True)
+st.dataframe(
+    raw_df.dtypes.astype(str).rename("데이터 유형"),
+    use_container_width=True
+)
 
 
 # ==================================================
@@ -96,23 +93,26 @@ missing_summary = pd.DataFrame({
 st.dataframe(missing_summary, use_container_width=True)
 
 missing_chart = missing_summary.reset_index()
-missing_chart.columns = ["열 이름", "결측치 개수", "결측치 비율(%)"]
+missing_chart.columns = [
+    "열 이름",
+    "결측치 개수",
+    "결측치 비율(%)"
+]
 
 fig_missing = px.bar(
     missing_chart,
     x="열 이름",
     y="결측치 개수",
     text="결측치 개수",
-    title="열별 결측치 개수",
-    labels={"열 이름": "데이터 항목"}
+    title="열별 결측치 개수"
 )
 
 st.plotly_chart(fig_missing, use_container_width=True)
 
 st.info("""
 원본 데이터는 344행, 8열입니다.
-부리 길이와 깊이 등 일부 측정값과 성별 정보에 결측치가 있습니다.
-결측치 개수는 비어 있는 셀의 수이며, 결측치가 있는 행의 수와는 다릅니다.
+부리 길이, 부리 깊이, 날개 길이, 몸무게, 성별 등에
+일부 결측치가 존재합니다.
 """)
 
 
@@ -124,7 +124,6 @@ st.header("3. 데이터 전처리")
 
 before_rows = len(raw_df)
 
-# 분석에 필요한 값이 없는 행 제거
 df = raw_df.dropna(
     subset=[
         "bill_length_mm",
@@ -140,21 +139,15 @@ removed_rows = before_rows - after_rows
 df["species_korean"] = df["species"].map(SPECIES_NAMES)
 df["island_korean"] = df["island"].map(ISLAND_NAMES)
 
-# 부리 길이 / 부리 깊이 비율
 df["bill_ratio"] = (
     df["bill_length_mm"] / df["bill_depth_mm"]
 ).round(2)
 
 col1, col2, col3 = st.columns(3)
 
-with col1:
-    st.metric("전처리 전", f"{before_rows}개")
-
-with col2:
-    st.metric("전처리 후", f"{after_rows}개")
-
-with col3:
-    st.metric("제외된 행", f"{removed_rows}개")
+col1.metric("전처리 전", f"{before_rows}개")
+col2.metric("전처리 후", f"{after_rows}개")
+col3.metric("제외된 행", f"{removed_rows}개")
 
 st.caption("""
 부리 길이, 부리 깊이, 종, 섬 정보가 없는 행만 제외했습니다.
@@ -228,12 +221,18 @@ with col2:
 
 species_average = (
     df.groupby("species_korean")
-    .agg(
-        평균 부리 길이=("bill_length_mm", "mean"),
-        평균 부리 깊이=("bill_depth_mm", "mean"),
-        평균 부리 비율=("bill_ratio", "mean"),
-        개체 수=("species", "count")
-    )
+    .agg({
+        "bill_length_mm": "mean",
+        "bill_depth_mm": "mean",
+        "bill_ratio": "mean",
+        "species": "count"
+    })
+    .rename(columns={
+        "bill_length_mm": "평균 부리 길이",
+        "bill_depth_mm": "평균 부리 깊이",
+        "bill_ratio": "평균 부리 비율",
+        "species": "개체 수"
+    })
     .round(2)
 )
 
@@ -279,7 +278,7 @@ island_table = pd.crosstab(
 st.dataframe(island_table, use_container_width=True)
 
 st.info("""
-데이터에서 아델리펭귄은 세 섬 모두에서 관찰됩니다.
+아델리펭귄은 세 섬 모두에서 관찰됩니다.
 턱끈펭귄은 드림섬, 젠투펭귄은 비스코섬에서 관찰됩니다.
 따라서 종과 섬의 분포가 서로 밀접하게 연결되어 있습니다.
 """)
@@ -332,11 +331,16 @@ with col2:
 
 island_average = (
     df.groupby("island_korean")
-    .agg(
-        평균 부리 길이=("bill_length_mm", "mean"),
-        평균 부리 깊이=("bill_depth_mm", "mean"),
-        개체 수=("species", "count")
-    )
+    .agg({
+        "bill_length_mm": "mean",
+        "bill_depth_mm": "mean",
+        "species": "count"
+    })
+    .rename(columns={
+        "bill_length_mm": "평균 부리 길이",
+        "bill_depth_mm": "평균 부리 깊이",
+        "species": "개체 수"
+    })
     .round(2)
 )
 
@@ -344,13 +348,14 @@ st.subheader("섬별 평균 부리 크기")
 st.dataframe(island_average, use_container_width=True)
 
 st.warning("""
-섬별 평균은 서로 다른 종의 데이터가 섞인 값입니다.
-따라서 섬별 평균 차이가 곧 서식지가 부리 형태에 영향을 주었다는 뜻은 아닙니다.
+섬별 평균에는 서로 다른 종의 데이터가 섞여 있습니다.
+따라서 섬별 평균 차이가 서식지가 부리 형태에 영향을 주었다는
+증거라고 단정할 수는 없습니다.
 """)
 
 
 # ==================================================
-# 10. 부리 길이와 깊이의 관계
+# 10. 부리 형태 분포 지도
 # ==================================================
 
 st.header("8. 부리 형태 분포 지도")
@@ -443,11 +448,16 @@ if comparable_species:
 
     same_species_average = (
         same_species_df.groupby("island_korean")
-        .agg(
-            평균 부리 길이=("bill_length_mm", "mean"),
-            평균 부리 깊이=("bill_depth_mm", "mean"),
-            개체 수=("species", "count")
-        )
+        .agg({
+            "bill_length_mm": "mean",
+            "bill_depth_mm": "mean",
+            "species": "count"
+        })
+        .rename(columns={
+            "bill_length_mm": "평균 부리 길이",
+            "bill_depth_mm": "평균 부리 깊이",
+            "species": "개체 수"
+        })
         .round(2)
     )
 
@@ -455,8 +465,8 @@ if comparable_species:
     st.dataframe(same_species_average, use_container_width=True)
 
     st.caption("""
-    현재 데이터에서 여러 섬에 걸쳐 관찰된 종은 아델리펭귄입니다.
-    따라서 이 비교는 아델리펭귄을 중심으로 해석해야 합니다.
+    여러 섬에서 관찰된 동일 종을 비교합니다.
+    이 데이터에서는 아델리펭귄이 세 섬에서 관찰됩니다.
     """)
 
 else:
@@ -469,7 +479,6 @@ else:
 
 st.header("10. 부리 길이와 깊이의 상관관계")
 
-# 전체 데이터 상관계수
 overall_corr = df[
     ["bill_length_mm", "bill_depth_mm"]
 ].corr().iloc[0, 1]
@@ -479,34 +488,31 @@ st.metric(
     f"{overall_corr:.3f}"
 )
 
-# 종별 상관계수
-corr_by_species = (
-    df.groupby("species_korean")
-    .apply(
-        lambda group: group[
-            ["bill_length_mm", "bill_depth_mm"]
-        ].corr().iloc[0, 1],
-        include_groups=False
-    )
-    .reset_index(name="상관계수")
-)
+corr_results = []
 
-corr_by_species["상관계수"] = corr_by_species["상관계수"].round(3)
+for species, group in df.groupby("species_korean"):
+
+    corr = group[
+        ["bill_length_mm", "bill_depth_mm"]
+    ].corr().iloc[0, 1]
+
+    corr_results.append({
+        "펭귄 종": species,
+        "상관계수": round(corr, 3)
+    })
+
+corr_by_species = pd.DataFrame(corr_results)
 
 st.subheader("종별 부리 길이와 깊이의 상관관계")
 st.dataframe(corr_by_species, use_container_width=True)
 
 fig_corr = px.bar(
     corr_by_species,
-    x="species_korean",
+    x="펭귄 종",
     y="상관계수",
-    color="species_korean",
+    color="펭귄 종",
     text="상관계수",
-    title="펭귄 종별 부리 길이와 깊이의 상관관계",
-    labels={
-        "species_korean": "펭귄 종",
-        "상관계수": "상관계수"
-    }
+    title="펭귄 종별 부리 길이와 깊이의 상관관계"
 )
 
 st.plotly_chart(fig_corr, use_container_width=True)
@@ -514,8 +520,7 @@ st.plotly_chart(fig_corr, use_container_width=True)
 st.info("""
 전체 펭귄을 한꺼번에 분석한 결과와 종별로 나누어 분석한 결과는
 서로 다를 수 있습니다. 종마다 부리 형태의 평균이 다르기 때문입니다.
-이처럼 집단을 구분했을 때 전체적인 경향이 달라지는 현상은
-집단 구성의 영향을 받는 통계적 현상과 관련이 있습니다.
+집단을 구분했을 때 전체적인 경향이 달라지는 현상과 관련이 있습니다.
 """)
 
 st.caption("""
@@ -568,7 +573,6 @@ outlier_summary = pd.DataFrame(outlier_results)
 st.subheader("전체 데이터 기준 이상치 후보")
 st.dataframe(outlier_summary, use_container_width=True)
 
-# 종별 IQR 분석
 species_outlier_results = []
 
 for species, group in df.groupby("species_korean"):
@@ -599,7 +603,6 @@ st.dataframe(
     use_container_width=True
 )
 
-# 이상치 후보 상세 확인
 for column in outlier_columns:
 
     q1 = df[column].quantile(0.25)
@@ -632,13 +635,13 @@ for column in outlier_columns:
 
 st.warning("""
 이상치 후보가 반드시 측정 오류라는 뜻은 아닙니다.
-종마다 부리 형태가 다르기 때문에 실제 생물학적 차이일 수도 있습니다.
+실제 펭귄의 다양한 부리 형태일 수도 있습니다.
 이번 분석에서는 이상치 후보를 임의로 삭제하지 않았습니다.
 """)
 
 
 # ==================================================
-# 14. 부리 길이와 깊이로 펭귄 종 추정
+# 14. 펭귄 종 추정
 # ==================================================
 
 st.header("12. 부리 길이와 깊이로 펭귄 종 추정")
@@ -701,20 +704,20 @@ st.success(
 
 col1, col2, col3 = st.columns(3)
 
-with col1:
-    st.metric("추정 종", nearest_penguin["species_korean"])
+col1.metric(
+    "추정 종",
+    nearest_penguin["species_korean"]
+)
 
-with col2:
-    st.metric(
-        "가장 가까운 부리 길이",
-        f"{nearest_penguin['bill_length_mm']:.1f} mm"
-    )
+col2.metric(
+    "가장 가까운 부리 길이",
+    f"{nearest_penguin['bill_length_mm']:.1f} mm"
+)
 
-with col3:
-    st.metric(
-        "가장 가까운 부리 깊이",
-        f"{nearest_penguin['bill_depth_mm']:.1f} mm"
-    )
+col3.metric(
+    "가장 가까운 부리 깊이",
+    f"{nearest_penguin['bill_depth_mm']:.1f} mm"
+)
 
 st.write(
     f"해당 데이터의 관찰 섬: "
@@ -727,7 +730,7 @@ prediction_plot = px.scatter(
     y="bill_depth_mm",
     color="species_korean",
     symbol="island_korean",
-    title="기존 펭귄 데이터와 입력한 부리 형태 비교",
+    title="기존 데이터와 입력한 부리 형태 비교",
     labels={
         "bill_length_mm": "부리 길이(mm)",
         "bill_depth_mm": "부리 깊이(mm)",
@@ -749,7 +752,10 @@ prediction_plot.add_scatter(
     name="입력한 부리 형태"
 )
 
-st.plotly_chart(prediction_plot, use_container_width=True)
+st.plotly_chart(
+    prediction_plot,
+    use_container_width=True
+)
 
 st.caption("""
 이 기능은 학습된 머신러닝 모델이 아니라
@@ -769,7 +775,7 @@ with st.expander("전처리된 데이터 전체 보기"):
 
 
 # ==================================================
-# 16. 데이터 출처 및 분석 한계
+# 16. 데이터 출처와 분석 한계
 # ==================================================
 
 st.header("14. 데이터 출처와 분석 한계")
@@ -790,7 +796,7 @@ st.markdown("""
 1. 섬별 종 분포가 서로 다르므로 섬별 평균만으로 서식지의 영향을 단정할 수 없습니다.
 2. 부리 길이와 깊이의 상관관계가 인과관계를 의미하지는 않습니다.
 3. IQR 방식으로 찾은 이상치 후보는 실제 측정 오류라고 확정할 수 없습니다.
-4. 종 예측 기능은 최근접 이웃 방식의 간단한 추정이며, 학습된 머신러닝 모델이 아닙니다.
+4. 종 추정 기능은 최근접 이웃 방식이며, 학습된 머신러닝 모델이 아닙니다.
 5. 이 데이터는 세 종의 펭귄을 대상으로 하므로 모든 펭귄 종에 일반화할 수 없습니다.
 """)
 
