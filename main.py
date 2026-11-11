@@ -22,7 +22,7 @@ st.set_page_config(
 )
 
 # =========================================
-# 2. FUTURE DESIGN CSS
+# 2. DESIGN CSS
 # =========================================
 
 st.markdown("""
@@ -35,7 +35,7 @@ st.markdown("""
     radial-gradient(ellipse at 10% 0%, #172C59 0%, transparent 40%),
     radial-gradient(ellipse at 90% 30%, #29204E 0%, transparent 35%),
     #080D1C;
-    color: #FFFFFF !important;
+    color: #F2F6FF;
 }
 
 [data-testid="stHeader"] {
@@ -48,6 +48,10 @@ st.markdown("""
 
 h1, h2, h3, p, label, span {
     font-family: 'Pretendard', sans-serif;
+}
+
+h1, h2, h3 {
+    color: #F5F8FF;
 }
 
 .main .block-container {
@@ -71,14 +75,23 @@ h1, h2, h3, p, label, span {
     box-shadow: 0 15px 55px #0008;
 }
 
+.hero-label {
+    color: #5DE4F5;
+    letter-spacing: 5px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
 .hero h1 {
     font-family: 'Orbitron', sans-serif;
     font-size: clamp(30px, 5vw, 55px);
     letter-spacing: 2px;
+    color: white;
     margin: 15px 0;
 }
 
 .hero p {
+    color: #C6DCF4;
     font-size: 16px;
 }
 
@@ -88,11 +101,13 @@ h1, h2, h3, p, label, span {
     border: 1px solid #56D9E5;
     border-radius: 30px;
     padding: 8px 15px;
+    color: #75F0F5;
     font-size: 12px;
     letter-spacing: 2px;
 }
 
 .section-label {
+    color: #59DDEB;
     font-family: 'Orbitron', sans-serif;
     font-size: 12px;
     letter-spacing: 3px;
@@ -108,12 +123,14 @@ h1, h2, h3, p, label, span {
 }
 
 .metric-title {
+    color: #93A9C9;
     font-size: 13px;
 }
 
 .metric-number {
     font-family: 'Orbitron', sans-serif;
     font-size: 29px;
+    color: #5DE4F5;
     font-weight: 700;
     margin-top: 12px;
 }
@@ -134,13 +151,14 @@ h1, h2, h3, p, label, span {
 }
 
 .result-name {
+    color: #74F1F4;
     font-size: 36px;
     font-weight: 800;
 }
 
 div.stButton > button {
     background: linear-gradient(100deg, #12BBD0, #7865ED);
-    color: #FFFFFF !important;
+    color: white;
     border: none;
     border-radius: 13px;
     min-height: 52px;
@@ -152,14 +170,24 @@ div.stButton > button {
 
 div.stButton > button:hover {
     border: 1px solid #9AF8FF;
-    color: #FFFFFF !important;
+    color: white;
     transform: translateY(-2px);
+}
+
+.stTabs [data-baseweb="tab"] {
+    color: #B4C7E3;
+    font-weight: 700;
+}
+
+.stTabs [aria-selected="true"] {
+    color: #61E6F1 !important;
 }
 
 div[data-baseweb="input"] > div,
 div[data-baseweb="select"] > div {
     background-color: #172642;
     border-color: #456080;
+    color: white;
 }
 
 div[data-testid="stDataFrame"] {
@@ -178,16 +206,17 @@ hr {
     border-radius: 15px;
 }
 
+[data-testid="stMetricValue"] {
+    color: #60E4F0;
+}
+
 footer {
     visibility: hidden;
 }
 
-/* =========================================
-   ALL TEXT: BRIGHT WHITE
-========================================= */
+/* ===== ALL TEXT: WHITE ===== */
 
 .stApp,
-.stApp *,
 .stApp p,
 .stApp span,
 .stApp label,
@@ -195,12 +224,14 @@ footer {
 .stApp li,
 .stApp div,
 .stApp [data-testid="stMarkdownContainer"],
-.stApp [data-testid="stMarkdownContainer"] *,
+.stApp [data-testid="stMarkdownContainer"] p,
+.stApp [data-testid="stMarkdownContainer"] li,
 .stApp [data-testid="stCaptionContainer"],
 .stApp [data-testid="stWidgetLabel"],
 .stApp [data-testid="stMetricLabel"],
 .stApp [data-testid="stMetricValue"],
 .stApp [data-testid="stMetricDelta"],
+.stApp [data-testid="stDataFrame"],
 .stApp [data-testid="stDataFrame"] *,
 .stApp [data-testid="stTable"] *,
 .stApp [data-baseweb="tab"],
@@ -216,7 +247,8 @@ footer {
     color: #FFFFFF !important;
 }
 
-/* 모든 제목 */
+/* Headings */
+
 .stApp h1,
 .stApp h2,
 .stApp h3,
@@ -226,31 +258,40 @@ footer {
     color: #FFFFFF !important;
 }
 
-/* 커스텀 디자인 영역 */
-.hero *,
+/* Hero and cards */
+
+.hero-label,
+.hero h1,
+.hero p,
+.hero-tag,
 .section-label,
 .metric-title,
 .metric-number,
 .result-name,
-.result-panel * {
+.result-panel p,
+div[style*="text-align:center"] *,
+div[style*="font-family:Orbitron"] {
     color: #FFFFFF !important;
 }
 
-/* 입력창 안내 글자 */
+/* Input placeholders */
+
 .stApp input::placeholder,
 .stApp textarea::placeholder {
     color: #FFFFFF !important;
     opacity: 0.85 !important;
 }
 
-/* 탭 글자 */
+/* Tabs */
+
 .stTabs [data-baseweb="tab"],
 .stTabs [data-baseweb="tab"] p,
 .stTabs [aria-selected="true"] {
     color: #FFFFFF !important;
 }
 
-/* Plotly 그래프 글자 */
+/* Plotly chart text */
+
 .js-plotly-plot .plotly text,
 .js-plotly-plot .plotly .xtick text,
 .js-plotly-plot .plotly .ytick text,
@@ -259,6 +300,31 @@ footer {
 .js-plotly-plot .plotly .annotation-text {
     fill: #FFFFFF !important;
     color: #FFFFFF !important;
+}
+
+/* ===== INPUT PARAMETERS: BLACK TEXT ===== */
+
+/* Number input values */
+
+.stApp [data-testid="stNumberInput"] input {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+}
+
+/* Number input placeholder */
+
+.stApp [data-testid="stNumberInput"] input::placeholder {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+    opacity: 1 !important;
+}
+
+/* Selected island text */
+
+.stApp [data-testid="stSelectbox"] [data-baseweb="select"] *,
+.stApp [data-testid="stSelectbox"] [data-baseweb="select"] input {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
 }
 
 </style>
@@ -373,11 +439,8 @@ island_korean = {
 plot_theme = "plotly_dark"
 
 
-# =========================================
-# 6. GRAPH TEXT COLOR FUNCTION
-# =========================================
-
 def apply_white_plotly_text(fig):
+    """그래프 안의 글자를 흰색으로 통일합니다."""
 
     fig.update_layout(
         font=dict(color="#FFFFFF"),
@@ -411,7 +474,7 @@ def apply_white_plotly_text(fig):
 
 
 # =========================================
-# 7. HERO
+# 6. HERO
 # =========================================
 
 st.markdown("""
@@ -432,7 +495,7 @@ st.write("")
 
 
 # =========================================
-# 8. METRICS
+# 7. METRICS
 # =========================================
 
 st.markdown(
@@ -470,7 +533,7 @@ st.divider()
 
 
 # =========================================
-# 9. PREDICTION
+# 8. PREDICTION
 # =========================================
 
 st.markdown(
@@ -537,7 +600,7 @@ if run:
             <div class="result-name">
                 🐧 {korean[prediction]}
             </div>
-            <p>
+            <p style="color:#D0DFF7;">
                 AI SPECIES IDENTIFICATION RESULT
             </p>
         </div>
@@ -556,7 +619,6 @@ if run:
     fig = go.Figure()
 
     for _, row in prob_df.iterrows():
-
         fig.add_trace(go.Bar(
             x=[row["종"]],
             y=[row["확률"]],
@@ -577,11 +639,7 @@ if run:
     )
 
     apply_white_plotly_text(fig)
-
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
+    st.plotly_chart(fig, use_container_width=True)
 
     st.info(
         "예측 확률은 학습된 모델의 추정값이며, "
@@ -590,7 +648,7 @@ if run:
 
 
 # =========================================
-# 10. DATA VISUALIZATION
+# 9. DATA VISUALIZATION
 # =========================================
 
 st.divider()
@@ -640,11 +698,7 @@ with tab1:
     )
 
     apply_white_plotly_text(fig)
-
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
+    st.plotly_chart(fig, use_container_width=True)
 
 
 # ISLAND CHART
@@ -685,11 +739,7 @@ with tab2:
     )
 
     apply_white_plotly_text(fig)
-
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
+    st.plotly_chart(fig, use_container_width=True)
 
 
 # DATABASE
@@ -724,7 +774,7 @@ with tab3:
 
 
 # =========================================
-# 11. MODEL PERFORMANCE
+# 10. MODEL PERFORMANCE
 # =========================================
 
 st.divider()
@@ -776,11 +826,7 @@ fig.update_layout(
 )
 
 apply_white_plotly_text(fig)
-
-st.plotly_chart(
-    fig,
-    use_container_width=True
-)
+st.plotly_chart(fig, use_container_width=True)
 
 st.caption(
     "혼동 행렬의 대각선은 실제 종을 정확히 예측한 개체 수를 의미합니다."
@@ -788,7 +834,7 @@ st.caption(
 
 
 # =========================================
-# 12. FOOTER
+# 11. FOOTER
 # =========================================
 
 st.markdown("""
@@ -800,15 +846,16 @@ st.markdown("""
 ">
     <div style="
         font-family:Orbitron;
+        color:#5DE4F5;
         letter-spacing:4px;
         font-size:18px;
     ">
         PENGUIN LAB.
     </div>
-    <p style="font-size:12px;">
+    <p style="color:#8196B5; font-size:12px;">
         ANTARCTIC AI RESEARCH PROJECT · 2026
     </p>
-    <p style="font-size:12px;">
+    <p style="color:#8196B5; font-size:12px;">
         POWERED BY MACHINE LEARNING
     </p>
 </div>
