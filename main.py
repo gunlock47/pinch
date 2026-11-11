@@ -1,527 +1,84 @@
 
-import streamlit as st
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, confusion_matrix
-
 # =========================================
-# 1. PAGE CONFIG
+# 9. ADVANCED DATA VISUALIZATION
 # =========================================
 
-st.set_page_config(
-    page_title="PENGUIN LAB | AI SYSTEM",
-    page_icon="🐧",
-    layout="wide"
-)
-
-# =========================================
-# 2. FUTURE DESIGN CSS
-# =========================================
-
-st.markdown("""
-<style>
-
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Pretendard:wght@400;500;600;700;800&display=swap');
-
-.stApp {
-    background:
-    radial-gradient(ellipse at 10% 0%, #172C59 0%, transparent 40%),
-    radial-gradient(ellipse at 90% 30%, #29204E 0%, transparent 35%),
-    #080D1C;
-    color: #F2F6FF;
-}
-
-[data-testid="stHeader"] {
-    background: transparent;
-}
-
-[data-testid="stSidebar"] {
-    background: #101A30;
-}
-
-h1, h2, h3, p, label, span {
-    font-family: 'Pretendard', sans-serif;
-}
-
-h1, h2, h3 {
-    color: #F5F8FF;
-}
-
-.main .block-container {
-    max-width: 1450px;
-    padding-top: 2rem;
-    padding-bottom: 4rem;
-}
-
-.hero {
-    background: linear-gradient(
-        120deg,
-        #101D3D 0%,
-        #163C65 50%,
-        #37235F 100%
-    );
-    border: 1px solid #416C9D;
-    border-radius: 25px;
-    padding: 48px 35px;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 15px 55px #0008;
-}
-
-.hero-label {
-    color: #5DE4F5;
-    letter-spacing: 5px;
-    font-size: 12px;
-    font-weight: 800;
-}
-
-.hero h1 {
-    font-family: 'Orbitron', sans-serif;
-    font-size: clamp(30px, 5vw, 55px);
-    letter-spacing: 2px;
-    color: white;
-    margin: 15px 0;
-}
-
-.hero p {
-    color: #C6DCF4;
-    font-size: 16px;
-}
-
-.hero-tag {
-    display: inline-block;
-    background: #56D9E522;
-    border: 1px solid #56D9E5;
-    border-radius: 30px;
-    padding: 8px 15px;
-    color: #75F0F5;
-    font-size: 12px;
-    letter-spacing: 2px;
-}
-
-.section-label {
-    color: #59DDEB;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 12px;
-    letter-spacing: 3px;
-}
-
-.metric-card {
-    background: linear-gradient(145deg, #172642, #10192D);
-    border: 1px solid #304D70;
-    border-radius: 17px;
-    padding: 22px;
-    min-height: 120px;
-    box-shadow: 0 8px 25px #0005;
-}
-
-.metric-title {
-    color: #93A9C9;
-    font-size: 13px;
-}
-
-.metric-number {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 29px;
-    color: #5DE4F5;
-    font-weight: 700;
-    margin-top: 12px;
-}
-
-.panel {
-    background: #111C31;
-    border: 1px solid #293F60;
-    border-radius: 20px;
-    padding: 25px;
-}
-
-.result-panel {
-    background: linear-gradient(120deg, #143D5B, #35235D);
-    border: 1px solid #5DE4F5;
-    border-radius: 20px;
-    padding: 30px;
-    text-align: center;
-}
-
-.result-name {
-    color: #74F1F4;
-    font-size: 36px;
-    font-weight: 800;
-}
-
-div.stButton > button {
-    background: linear-gradient(100deg, #12BBD0, #7865ED);
-    color: white;
-    border: none;
-    border-radius: 13px;
-    min-height: 52px;
-    font-weight: 800;
-    font-size: 16px;
-    box-shadow: 0 5px 20px #13BCD055;
-    transition: 0.2s;
-}
-
-div.stButton > button:hover {
-    border: 1px solid #9AF8FF;
-    color: white;
-    transform: translateY(-2px);
-}
-
-.stTabs [data-baseweb="tab"] {
-    color: #B4C7E3;
-    font-weight: 700;
-}
-
-.stTabs [aria-selected="true"] {
-    color: #61E6F1 !important;
-}
-
-div[data-baseweb="input"] > div,
-div[data-baseweb="select"] > div {
-    background-color: #172642;
-    border-color: #456080;
-    color: white;
-}
-
-div[data-testid="stDataFrame"] {
-    border: 1px solid #304D70;
-    border-radius: 12px;
-}
-
-hr {
-    border-color: #30435F;
-}
-
-[data-testid="stMetric"] {
-    background: #172642;
-    border: 1px solid #304D70;
-    padding: 15px;
-    border-radius: 15px;
-}
-
-[data-testid="stMetricValue"] {
-    color: #60E4F0;
-}
-
-footer {
-    visibility: hidden;
-}
-
-</style>
-""", unsafe_allow_html=True)
-
-
-# =========================================
-# 3. DATA
-# =========================================
-
-@st.cache_data
-def load_data():
-    url = "https://raw.githubusercontent.com/allisonhorst/palmerpenguins/main/inst/extdata/penguins.csv"
-    data = pd.read_csv(url)
-
-    return data.dropna(
-        subset=[
-            "species",
-            "island",
-            "bill_length_mm",
-            "bill_depth_mm"
-        ]
-    )
-
-try:
-    df = load_data()
-except Exception:
-    st.error("데이터를 불러오지 못했습니다.")
-    st.stop()
-
-
-# =========================================
-# 4. MACHINE LEARNING
-# =========================================
-
-@st.cache_resource
-def train_model(data):
-
-    X = data[
-        ["bill_length_mm", "bill_depth_mm", "island"]
-    ]
-
-    y = data["species"]
-
-    X_train, X_test, y_train, y_test = train_test_split(
-        X,
-        y,
-        test_size=0.25,
-        random_state=42,
-        stratify=y
-    )
-
-    preprocessing = ColumnTransformer([
-        (
-            "numeric",
-            StandardScaler(),
-            ["bill_length_mm", "bill_depth_mm"]
-        ),
-        (
-            "island",
-            OneHotEncoder(handle_unknown="ignore"),
-            ["island"]
-        )
-    ])
-
-    model = Pipeline([
-        ("preprocessing", preprocessing),
-        ("classifier", LogisticRegression(max_iter=1000))
-    ])
-
-    model.fit(X_train, y_train)
-
-    predictions = model.predict(X_test)
-
-    accuracy = accuracy_score(y_test, predictions)
-
-    matrix = confusion_matrix(
-        y_test,
-        predictions,
-        labels=model.classes_
-    )
-
-    return model, accuracy, matrix, y_test, predictions
-
-
-model, accuracy, matrix, y_test, predictions = train_model(df)
-
-
-# =========================================
-# 5. COLOR SYSTEM
-# =========================================
-
-colors = {
-    "Adelie": "#35D6E8",
-    "Chinstrap": "#B58AFF",
-    "Gentoo": "#FFAD66"
-}
-
-korean = {
-    "Adelie": "아델리펭귄",
-    "Chinstrap": "턱끈펭귄",
-    "Gentoo": "젠투펭귄"
-}
-
-island_korean = {
-    "Biscoe": "비스코섬",
-    "Dream": "드림섬",
-    "Torgersen": "토르거슨섬"
-}
-
-plot_theme = "plotly_dark"
-
-
-# =========================================
-# 6. HERO
-# =========================================
-
-st.markdown("""
-<div class="hero">
-    <div class="hero-label">ANTARCTIC INTELLIGENCE SYSTEM</div>
-    <h1>PENGUIN LAB.</h1>
-    <p>AI POWERED SPECIES CLASSIFICATION</p>
-    <p>
-        부리의 형태와 서식지 데이터를 분석하여
-        펭귄의 종을 예측하는 인공지능 연구 프로젝트
-    </p>
-    <span class="hero-tag">● SYSTEM ONLINE</span>
-    <span class="hero-tag">PALMER PENGUINS DATABASE</span>
-</div>
-""", unsafe_allow_html=True)
-
-st.write("")
-
-
-# =========================================
-# 7. METRICS
-# =========================================
-
-st.markdown(
-    '<div class="section-label">01 / RESEARCH OVERVIEW</div>',
-    unsafe_allow_html=True
-)
-
-st.subheader("연구 데이터 현황")
-
-c1, c2, c3, c4 = st.columns(4)
-
-metrics = [
-    ("TOTAL SPECIMENS", f"{len(df)}"),
-    ("SPECIES TYPES", "03"),
-    ("ISLAND LOCATIONS", "03"),
-    ("MODEL ACCURACY", f"{accuracy*100:.1f}%")
-]
-
-for col, (title, number) in zip(
-    [c1, c2, c3, c4], metrics
-):
-    with col:
-        st.markdown(
-            f"""
-            <div class="metric-card">
-                <div class="metric-title">{title}</div>
-                <div class="metric-number">{number}</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-st.write("")
 st.divider()
 
-
-# =========================================
-# 8. PREDICTION
-# =========================================
-
 st.markdown(
-    '<div class="section-label">02 / AI CLASSIFICATION</div>',
+    '<div class="section-label">03 / ADVANCED DATA ANALYSIS</div>',
     unsafe_allow_html=True
 )
 
-st.header("🐧 AI 펭귄 종 예측 시스템")
+st.header("📊 PENGUIN DATA ANALYSIS")
+st.caption("8가지 시각화로 살펴보는 펭귄의 부리와 서식지")
 
-st.write(
-    "부리의 길이와 깊이, 그리고 서식 섬을 입력하여 "
-    "AI가 펭귄의 종을 예측합니다."
-)
+# 그래프를 4개 그룹으로 나누기
+tab1, tab2, tab3, tab4 = st.tabs([
+    "🧬 부리 분석",
+    "🌎 서식지 분석",
+    "📈 데이터 분포",
+    "🧠 AI 분석"
+])
 
-with st.container(border=True):
+# -----------------------------------------
+# TAB 1 : 부리 분석
+# -----------------------------------------
 
-    st.markdown("### INPUT PARAMETERS")
+with tab1:
+
+    st.subheader("01. 종별 부리 크기 비교")
 
     col1, col2 = st.columns(2)
 
     with col1:
-        bill_length = st.number_input(
-            "부리 길이 (mm)",
-            20.0, 70.0, 45.0, 0.1
+
+        fig = px.box(
+            df,
+            x="species",
+            y="bill_length_mm",
+            color="species",
+            color_discrete_map=colors,
+            template=plot_theme,
+            points="all",
+            title="종별 부리 길이 비교",
+            labels={
+                "species": "펭귄 종",
+                "bill_length_mm": "부리 길이 (mm)"
+            }
         )
+
+        fig.update_layout(height=430)
+        st.plotly_chart(fig, use_container_width=True)
 
     with col2:
-        bill_depth = st.number_input(
-            "부리 깊이 (mm)",
-            10.0, 30.0, 17.0, 0.1
+
+        fig = px.box(
+            df,
+            x="species",
+            y="bill_depth_mm",
+            color="species",
+            color_discrete_map=colors,
+            template=plot_theme,
+            points="all",
+            title="종별 부리 깊이 비교",
+            labels={
+                "species": "펭귄 종",
+                "bill_depth_mm": "부리 깊이 (mm)"
+            }
         )
 
-    island = st.selectbox(
-        "서식 섬",
-        ["Biscoe", "Dream", "Torgersen"],
-        format_func=lambda x: island_korean[x]
-    )
-
-    st.write("")
-
-    run = st.button(
-        "⚡ RUN AI PREDICTION",
-        use_container_width=True
-    )
-
-
-if run:
-
-    input_data = pd.DataFrame({
-        "bill_length_mm": [bill_length],
-        "bill_depth_mm": [bill_depth],
-        "island": [island]
-    })
-
-    prediction = model.predict(input_data)[0]
-    probability = model.predict_proba(input_data)[0]
-
-    st.write("")
-
-    st.markdown(
-        f"""
-        <div class="result-panel">
-            <div class="section-label">PREDICTION COMPLETE</div>
-            <div class="result-name">
-                🐧 {korean[prediction]}
-            </div>
-            <p style="color:#D0DFF7;">
-                AI SPECIES IDENTIFICATION RESULT
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    st.subheader("종별 예측 확률")
-
-    prob_df = pd.DataFrame({
-        "종": [korean[x] for x in model.classes_],
-        "확률": probability * 100,
-        "색상": [colors[x] for x in model.classes_]
-    })
-
-    fig = go.Figure()
-
-    for _, row in prob_df.iterrows():
-        fig.add_trace(go.Bar(
-            x=[row["종"]],
-            y=[row["확률"]],
-            marker_color=row["색상"],
-            text=[f'{row["확률"]:.1f}%'],
-            textposition="outside"
-        ))
-
-    fig.update_layout(
-        template=plot_theme,
-        height=350,
-        yaxis=dict(
-            title="확률 (%)",
-            range=[0, 115]
-        ),
-        showlegend=False,
-        margin=dict(t=30, b=20)
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
+        fig.update_layout(height=430)
+        st.plotly_chart(fig, use_container_width=True)
 
     st.info(
-        "예측 확률은 학습된 모델의 추정값이며, "
-        "실제 종을 확정하는 값은 아닙니다."
+        "상자그림을 통해 종마다 부리 길이와 깊이의 "
+        "중앙값 및 데이터 분포를 비교할 수 있습니다."
     )
 
+    st.divider()
 
-# =========================================
-# 9. DATA VISUALIZATION
-# =========================================
-
-st.divider()
-
-st.markdown(
-    '<div class="section-label">03 / DATA VISUALIZATION</div>',
-    unsafe_allow_html=True
-)
-
-st.header("데이터 시각화 연구실")
-
-tab1, tab2, tab3 = st.tabs([
-    "🧬 부리 형태",
-    "🌎 섬별 분포",
-    "📋 데이터베이스"
-])
-
-
-# BILL SCATTER
-with tab1:
-
-    st.subheader("부리 길이와 깊이의 관계")
+    st.subheader("02. 부리 길이와 깊이의 관계")
 
     fig = px.scatter(
         df,
@@ -531,6 +88,7 @@ with tab1:
         color_discrete_map=colors,
         hover_data=["island"],
         template=plot_theme,
+        title="펭귄 종별 부리 형태 산점도",
         labels={
             "bill_length_mm": "부리 길이 (mm)",
             "bill_depth_mm": "부리 깊이 (mm)",
@@ -542,19 +100,18 @@ with tab1:
         marker=dict(size=11, opacity=0.85)
     )
 
-    fig.update_layout(
-        height=520,
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(15,27,48,0.8)"
-    )
+    fig.update_layout(height=500)
 
     st.plotly_chart(fig, use_container_width=True)
 
 
-# ISLAND CHART
+# -----------------------------------------
+# TAB 2 : 서식지 분석
+# -----------------------------------------
+
 with tab2:
 
-    st.subheader("섬에 따른 펭귄 분포")
+    st.subheader("03. 섬별 펭귄 개체 수")
 
     island_df = pd.crosstab(
         df["island"],
@@ -579,132 +136,236 @@ with tab2:
             korean[k]: colors[k] for k in colors
         },
         barmode="group",
-        template=plot_theme
+        template=plot_theme,
+        title="섬에 따른 펭귄 종별 개체 수",
+        text_auto=True
+    )
+
+    fig.update_layout(height=450)
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.divider()
+
+    st.subheader("04. 섬별 펭귄 종 구성 비율")
+
+    fig = px.bar(
+        island_df,
+        x="island",
+        y="개체 수",
+        color="species",
+        color_discrete_map={
+            korean[k]: colors[k] for k in colors
+        },
+        barmode="relative",
+        barnorm="percent",
+        template=plot_theme,
+        title="각 섬에서 종별로 차지하는 비율",
+        labels={
+            "island": "서식 섬",
+            "개체 수": "구성 비율 (%)"
+        }
     )
 
     fig.update_layout(
-        height=480,
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(15,27,48,0.8)"
+        height=450,
+        yaxis_title="구성 비율 (%)"
     )
 
     st.plotly_chart(fig, use_container_width=True)
 
+    st.caption(
+        "각 섬의 전체 펭귄 중 어떤 종이 큰 비율을 차지하는지 확인합니다."
+    )
 
-# DATABASE
+
+# -----------------------------------------
+# TAB 3 : 데이터 분포
+# -----------------------------------------
+
 with tab3:
 
-    st.subheader("PALMER PENGUINS DATABASE")
+    st.subheader("05. 부리 길이 분포")
 
-    display_df = df[
+    fig = px.histogram(
+        df,
+        x="bill_length_mm",
+        color="species",
+        color_discrete_map=colors,
+        template=plot_theme,
+        barmode="overlay",
+        opacity=0.75,
+        nbins=25,
+        title="펭귄 종별 부리 길이 분포",
+        labels={
+            "bill_length_mm": "부리 길이 (mm)",
+            "count": "펭귄 개체 수",
+            "species": "펭귄 종"
+        }
+    )
+
+    fig.update_layout(height=450)
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.divider()
+
+    st.subheader("06. 변수 간 상관관계 히트맵")
+
+    numeric_data = df[
         [
-            "species",
-            "island",
             "bill_length_mm",
-            "bill_depth_mm"
+            "bill_depth_mm",
+            "flipper_length_mm",
+            "body_mass_g"
         ]
-    ].copy()
+    ].dropna()
 
-    display_df["species"] = display_df["species"].map(korean)
-    display_df["island"] = display_df["island"].map(island_korean)
+    numeric_data = numeric_data.rename(
+        columns={
+            "bill_length_mm": "부리 길이",
+            "bill_depth_mm": "부리 깊이",
+            "flipper_length_mm": "날개 길이",
+            "body_mass_g": "몸무게"
+        }
+    )
 
-    display_df.columns = [
-        "펭귄 종",
-        "서식 섬",
-        "부리 길이 (mm)",
-        "부리 깊이 (mm)"
-    ]
+    corr = numeric_data.corr()
 
-    st.dataframe(
-        display_df,
-        use_container_width=True,
-        height=420
+    fig = px.imshow(
+        corr,
+        text_auto=".2f",
+        color_continuous_scale=[
+            "#6650A4",
+            "#172642",
+            "#35D6E8"
+        ],
+        zmin=-1,
+        zmax=1,
+        template=plot_theme,
+        title="펭귄 신체 특징의 상관관계"
+    )
+
+    fig.update_layout(height=500)
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.caption(
+        "1에 가까우면 양의 관계, -1에 가까우면 음의 관계이며, "
+        "0에 가까울수록 선형 관계가 약합니다."
     )
 
 
-# =========================================
-# 10. MODEL PERFORMANCE
-# =========================================
+# -----------------------------------------
+# TAB 4 : AI 분석
+# -----------------------------------------
 
-st.divider()
+with tab4:
 
-st.markdown(
-    '<div class="section-label">04 / MODEL PERFORMANCE</div>',
-    unsafe_allow_html=True
-)
+    st.subheader("07. AI 모델 변수 영향 비교")
 
-st.header("🧠 AI 모델 성능 분석")
+    # 모델에 학습된 로지스틱 회귀 계수
+    classifier = model.named_steps["classifier"]
+    preprocessor = model.named_steps["preprocessing"]
 
-a, b = st.columns(2)
+    feature_names = preprocessor.get_feature_names_out()
 
-with a:
+    importance = abs(classifier.coef_).mean(axis=0)
+
+    importance_df = pd.DataFrame({
+        "변수": feature_names,
+        "영향 크기": importance
+    })
+
+    importance_df["변수"] = (
+        importance_df["변수"]
+        .str.replace("numeric__", "", regex=False)
+        .str.replace("island__island_", "섬: ", regex=False)
+    )
+
+    importance_df = importance_df.sort_values(
+        "영향 크기",
+        ascending=True
+    )
+
+    fig = px.bar(
+        importance_df,
+        x="영향 크기",
+        y="변수",
+        orientation="h",
+        color="영향 크기",
+        color_continuous_scale=[
+            "#6650A4",
+            "#267DAB",
+            "#35D6E8"
+        ],
+        template=plot_theme,
+        title="분류 모델의 변수별 계수 크기",
+        labels={
+            "영향 크기": "평균 절댓값 계수",
+            "변수": "분류에 사용된 변수"
+        }
+    )
+
+    fig.update_layout(height=450)
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.caption(
+        "로지스틱 회귀 계수의 절댓값을 종별로 평균한 값입니다. "
+        "인과관계나 독립적인 변수 중요도를 직접 의미하지는 않습니다."
+    )
+
+    st.divider()
+
+    st.subheader("08. AI 분류 결과")
+
+    fig = px.imshow(
+        matrix,
+        x=[korean[x] for x in model.classes_],
+        y=[korean[x] for x in model.classes_],
+        text_auto=True,
+        color_continuous_scale=[
+            "#111C31",
+            "#176B87",
+            "#35D6E8"
+        ],
+        template=plot_theme,
+        title="실제 종과 AI 예측 종 비교",
+        labels={
+            "x": "예측한 종",
+            "y": "실제 종",
+            "color": "개체 수"
+        }
+    )
+
+    fig.update_layout(height=450)
+
+    st.plotly_chart(fig, use_container_width=True)
+
     st.metric(
-        "TEST ACCURACY",
-        f"{accuracy*100:.2f}%"
+        "AI 시험 데이터 정확도",
+        f"{accuracy * 100:.2f}%"
     )
 
-with b:
-    st.metric(
-        "TEST DATA",
-        f"{len(y_test)} specimens"
-    )
 
-st.subheader("CONFUSION MATRIX")
-
-fig = px.imshow(
-    matrix,
-    x=[korean[x] for x in model.classes_],
-    y=[korean[x] for x in model.classes_],
-    text_auto=True,
-    color_continuous_scale=[
-        "#111C31",
-        "#176B87",
-        "#35D6E8"
-    ],
-    template=plot_theme,
-    labels={
-        "x": "예측한 종",
-        "y": "실제 종",
-        "color": "개체 수"
-    }
-)
-
-fig.update_layout(
-    height=430,
-    paper_bgcolor="rgba(0,0,0,0)"
-)
-
-st.plotly_chart(fig, use_container_width=True)
-
-st.caption(
-    "혼동 행렬의 대각선은 실제 종을 정확히 예측한 개체 수를 의미합니다."
-)
-
-
-# =========================================
-# 11. FOOTER
-# =========================================
+# -----------------------------------------
+# DATA FOOTNOTE
+# -----------------------------------------
 
 st.markdown("""
 <div style="
+    background:#111C31;
+    border:1px solid #304D70;
+    padding:20px;
+    border-radius:15px;
     text-align:center;
-    padding:40px 10px;
-    border-top:1px solid #30435F;
-    margin-top:30px;
 ">
-    <div style="
-        font-family:Orbitron;
-        color:#5DE4F5;
-        letter-spacing:4px;
-        font-size:18px;
-    ">
-        PENGUIN LAB.
-    </div>
-    <p style="color:#8196B5; font-size:12px;">
-        ANTARCTIC AI RESEARCH PROJECT · 2026
-    </p>
-    <p style="color:#8196B5; font-size:12px;">
-        POWERED BY MACHINE LEARNING
+    <span style="color:#5DE4F5; letter-spacing:3px;">
+        PENGUIN DATA SCIENCE LAB
+    </span>
+    <p style="color:#91A7C7; font-size:12px;">
+        8 VISUALIZATION MODULES · PALMER PENGUINS
     </p>
 </div>
 """, unsafe_allow_html=True)
