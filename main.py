@@ -114,6 +114,49 @@ div[data-testid="stNumberInput"] input {
     font-size: 14px;
 }
 
+/* 새로운 펭귄 종 예측하기 영역 */
+.prediction-section {
+    background: #eaf2ff;
+    border: 2px solid #55e6ff;
+    border-radius: 16px;
+    padding: 22px;
+    margin-top: 15px;
+    margin-bottom: 15px;
+}
+
+.prediction-section h2,
+.prediction-section h3,
+.prediction-section p,
+.prediction-section label {
+    color: black !important;
+}
+
+/* 예측 버튼 */
+div.stButton > button {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 2px solid #55e6ff !important;
+    border-radius: 10px !important;
+    font-weight: 800 !important;
+}
+
+div.stButton > button p,
+div.stButton > button span,
+div.stButton > button div {
+    color: #000000 !important;
+}
+
+div.stButton > button:hover {
+    background-color: #d9f5ff !important;
+    color: #000000 !important;
+    border: 2px solid #55e6ff !important;
+}
+
+div.stButton > button:focus {
+    color: #000000 !important;
+    border-color: #55e6ff !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -139,7 +182,7 @@ def load_data():
 
 try:
     df = load_data()
-except Exception as e:
+except Exception:
     st.error("데이터를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.")
     st.stop()
 
@@ -191,7 +234,6 @@ with st.expander("열별 결측치 확인"):
     missing = df.isna().sum().reset_index()
     missing.columns = ["열 이름", "결측치 개수"]
     st.dataframe(missing, use_container_width=True)
-
     st.write("전체 결측치 개수:", int(df.isna().sum().sum()))
 
 # --------------------------------------------------
@@ -202,7 +244,6 @@ st.header("🧹 DATA PREPROCESSING")
 
 original_count = len(df)
 
-# 모델에 필요한 열의 결측치만 제거
 model_df = df.dropna(
     subset=[
         "species",
@@ -226,6 +267,7 @@ st.write(f"모델 분석에 필요한 값이 없는 데이터 {removed_count}행
 st.write("성별(sex)은 모델 입력에 사용하지 않으므로 성별 결측치는 제거하지 않았습니다.")
 
 # 이상치 확인
+
 st.subheader("이상치 확인")
 
 fig_box = px.box(
@@ -238,6 +280,7 @@ fig_box = px.box(
         "species": "펭귄 종"
     }
 )
+
 fig_box.update_layout(template="plotly_dark")
 st.plotly_chart(fig_box, use_container_width=True)
 
@@ -272,7 +315,6 @@ fig_scatter = px.scatter(
 fig_scatter.update_layout(template="plotly_dark")
 st.plotly_chart(fig_scatter, use_container_width=True)
 
-# 상관관계
 correlation = model_df["bill_length_mm"].corr(
     model_df["bill_depth_mm"]
 )
@@ -361,7 +403,7 @@ fig_habitat.update_layout(template="plotly_dark")
 st.plotly_chart(fig_habitat, use_container_width=True)
 
 # --------------------------------------------------
-# 머신러닝: 랜덤 포레스트 단일 모델
+# 머신러닝: 랜덤 포레스트
 # --------------------------------------------------
 
 st.header("🤖 AI PREDICTION")
@@ -385,16 +427,8 @@ categorical_features = ["island"]
 
 preprocessor = ColumnTransformer(
     transformers=[
-        (
-            "num",
-            StandardScaler(),
-            numeric_features
-        ),
-        (
-            "cat",
-            OneHotEncoder(handle_unknown="ignore"),
-            categorical_features
-        )
+        ("num", StandardScaler(), numeric_features),
+        ("cat", OneHotEncoder(handle_unknown="ignore"), categorical_features)
     ]
 )
 
@@ -427,24 +461,9 @@ random_forest.fit(X_train, y_train)
 y_pred = random_forest.predict(X_test)
 
 accuracy = accuracy_score(y_test, y_pred)
-precision = precision_score(
-    y_test,
-    y_pred,
-    average="weighted",
-    zero_division=0
-)
-recall = recall_score(
-    y_test,
-    y_pred,
-    average="weighted",
-    zero_division=0
-)
-f1 = f1_score(
-    y_test,
-    y_pred,
-    average="weighted",
-    zero_division=0
-)
+precision = precision_score(y_test, y_pred, average="weighted", zero_division=0)
+recall = recall_score(y_test, y_pred, average="weighted", zero_division=0)
+f1 = f1_score(y_test, y_pred, average="weighted", zero_division=0)
 
 st.markdown(
     '<div class="section"><h3>🌲 RANDOM FOREST MODEL</h3>'
@@ -467,14 +486,15 @@ with col4:
     st.metric("F1 점수", f"{f1 * 100:.2f}%")
 
 # --------------------------------------------------
-# 실제 펭귄 종 예측
+# 새로운 펭귄 종 예측
 # --------------------------------------------------
 
-st.subheader("🐧 새로운 펭귄 종 예측하기")
-
-st.write(
-    "부리 길이와 깊이, 서식하는 섬을 입력하면 "
-    "랜덤 포레스트 모델이 펭귄 종을 예측합니다."
+st.markdown(
+    '<div class="prediction-section">'
+    '<h2>🐧 새로운 펭귄 종 예측하기</h2>'
+    '<p>부리 길이와 깊이, 서식하는 섬을 입력하면 랜덤 포레스트 모델이 펭귄 종을 예측합니다.</p>'
+    '</div>',
+    unsafe_allow_html=True
 )
 
 col1, col2 = st.columns(2)
@@ -548,10 +568,7 @@ if st.button("🔍 펭귄 종 예측하기", use_container_width=True):
         yaxis_tickformat=".0%"
     )
 
-    st.plotly_chart(
-        fig_probability,
-        use_container_width=True
-    )
+    st.plotly_chart(fig_probability, use_container_width=True)
 
     st.markdown(
         '<div class="notice">예측 확률은 학습된 모델의 추정값이며, 실제 종을 확정하는 값은 아닙니다.</div>',
