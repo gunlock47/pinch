@@ -1,6 +1,4 @@
-from pathlib import Path
-
-code = r'''import streamlit as st
+import streamlit as st
 import pandas as pd
 import plotly.express as px
 
@@ -378,8 +376,3 @@ if st.button("🐧 펭귄 종 예측하기", type="primary"):
 # --------------------------------------------------
 st.divider()
 st.caption("데이터 출처: Palmer Penguins | 분석 목적: 부리 형태와 서식지 정보를 이용한 펭귄 종 분류")
-'''
-
-path = Path("/mnt/data/main.py")
-path.write_text(code, encoding="utf-8")
-print(f"생성 완료: {path} ({len(code.splitlines())}줄)")
